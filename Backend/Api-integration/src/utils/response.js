@@ -1,15 +1,13 @@
-export function statusSuccess(res,data,statusCode=200){
+export function statusSuccess(res, data, statusCode = 200) {
     return res.status(statusCode).json({
-        status:"success",
+        status: "success",
         data
     });
-
 }
 
-export function statusError(res,message,statusCode=500){
+export function statusError(res, message, statusCode = 500) {
     return res.status(statusCode).json({
-        status:"error",
+        status: "error",
         message
     });
-
 }
