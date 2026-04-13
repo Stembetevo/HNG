@@ -1,0 +1,23 @@
+{
+  "name": "api-integration",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+	"start":"pnpm start",
+    "dev": "nodemon server.js",
+    "build": "nodemon build",
+    "lint": "eslint .",
+	"run":"pnpm run dev"
+  },
+  "dependencies": {
+		"express": "^5.2.1",
+		"axios": "^1.15.0",
+		"cors": "^2.8.6"
+		
+  },
+  "devDependencies": {
+		"nodemon": "^3.1.14"
+  }
+
+}
