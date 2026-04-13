@@ -1,37 +1,103 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 
-
-function formatDueDate(date) {
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+function PencilIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 20h9"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
-function formatTimeRemaining(date) {
-  const now = new Date();
-  const diffMs = date - now;
-  const absDiff = Math.abs(diffMs);
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M3 6h18"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
-  const minutes = Math.floor(absDiff / 60000);
-  const hours = Math.floor(absDiff / 3600000);
-  const days = Math.floor(absDiff / 86400000);
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M20 6L9 17l-5-5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
-  const overdue = diffMs < 0;
+function CalendarIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect
+        x="3"
+        y="4"
+        width="18"
+        height="17"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.75"
+      />
+      <path
+        d="M8 2v4M16 2v4M3 9h18"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
-  if (minutes < 1) return overdue ? "Just overdue" : "Due now";
-  if (minutes < 60)
-    return overdue
-      ? `Overdue by ${minutes}m`
-      : `Due in ${minutes}m`;
-  if (hours < 24)
-    return overdue
-      ? `Overdue by ${hours}h`
-      : `Due in ${hours}h`;
-  return overdue
-    ? `Overdue by ${days}d`
-    : `Due in ${days} day${days !== 1 ? "s" : ""}`;
+function ClockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M12 7v5l3 2"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 
@@ -49,25 +115,18 @@ const SAMPLE_TASK = {
 
 export default function TodoCard({ task = SAMPLE_TASK }) {
   const [completed, setCompleted] = useState(false);
-  const [tick, setTick] = useState(0);
-
-  // Refresh time display every 45 seconds
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 45_000);
-    return () => clearInterval(id);
-  }, []);
 
   const dueDate = task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate);
-  const timeRemaining = formatTimeRemaining(dueDate);
-  const dueDateStr = formatDueDate(dueDate);
+  const dueDateStr = dueDate.toString();
+  const dueTimeStr = dueDate.toTimeString();
   const isOverdue = dueDate < new Date();
 
   const handleEdit = useCallback(() => {
-    alert(`Edit task: ${task.title}`);
+    alert('Are you sure you want to edit the task ?!');
   }, [task.title]);
 
   const handleDelete = useCallback(() => {
-    alert(`Delete task: ${task.title}`);
+    alert(`Are you sure you want to remove the task?`);
   }, [task.title]);
 
   const priorityClass = `priority--${task.priority.toLowerCase()}`;
@@ -76,7 +135,7 @@ export default function TodoCard({ task = SAMPLE_TASK }) {
   return (
     <article
       data-testid="test-todo-card"
-      className={`todo-card${completed ? " todo-card--done" : ""}`}
+      className="todo-card"
     >
       {/* ── top bar ── */}
       <div className="todo-card__topbar">
@@ -135,7 +194,7 @@ export default function TodoCard({ task = SAMPLE_TASK }) {
       {/* ── description ── */}
       <p
         data-testid="test-todo-description"
-        className="todo-card__desc"
+        className={`todo-card__desc${completed ? " todo-card__desc--done" : ""}`}
       >
         {task.description}
       </p>
@@ -175,10 +234,10 @@ export default function TodoCard({ task = SAMPLE_TASK }) {
             data-testid="test-todo-time-remaining"
             dateTime={dueDate.toISOString()}
             className={`time-remaining${isOverdue ? " time-remaining--overdue" : ""}`}
-            aria-label={`Time remaining: ${timeRemaining}`}
+            aria-label={`Due time: ${dueTimeStr}`}
           >
             <ClockIcon />
-            {timeRemaining}
+            {dueTimeStr}
           </time>
         </div>
 

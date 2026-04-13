@@ -1,13 +1,5 @@
-/* ─────────────────────────────────────────────
-   TodoCard.css
-   Font: DM Sans (body) + DM Mono (meta/tags)
-   Import in your index.html or main index.css:
-   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
-───────────────────────────────────────────── */
-
-/* ── tokens ── */
 :root {
-  --card-bg: #ffffff;
+  --card-bg: rgb(17, 15, 15);
   --card-border: #e8e4de;
   --card-shadow: 0 2px 8px rgba(0,0,0,.06), 0 0 0 1px var(--card-border);
   --card-shadow-hover: 0 8px 28px rgba(0,0,0,.10), 0 0 0 1px #d4cfc8;
@@ -20,7 +12,7 @@
   --accent: #2d6ef7;
   --accent-soft: #eef2fe;
 
-  --tag-bg: #f2f0eb;
+  --tag-bg: #171616;
   --tag-text: #4a4742;
 
   /* priority */
@@ -51,7 +43,6 @@
   --transition: 0.18s ease;
 }
 
-/* ── card ── */
 .todo-card {
   font-family: var(--font-body);
   background: var(--card-bg);
@@ -82,11 +73,7 @@
   transform: translateY(-2px);
 }
 
-.todo-card--done {
-  opacity: 0.62;
-}
-
-.todo-card--done .todo-card__title {
+.todo-card__desc--done {
   text-decoration: line-through;
   color: var(--text-muted);
 }
