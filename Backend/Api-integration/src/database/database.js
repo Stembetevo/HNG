@@ -1,8 +1,30 @@
-const Database = require('better-sqlite3')
-const path = require('path')
+import { DatabaseSync } from "node:sqlite";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const db = new Database(path.join(___dirname, 'mydb.db'))
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const dbPath = path.join(__dirname, "profiles.db");
 
-db.pragma('foreign-keys = ON');
+const db = new DatabaseSync(dbPath);
 
-module.exports = db;
+db.exec("PRAGMA journal_mode = WAL;");
+db.exec("PRAGMA foreign_keys = ON;");
+
+db.exec(`
+	CREATE TABLE IF NOT EXISTS profiles (
+		id TEXT PRIMARY KEY,
+		normalized_name TEXT NOT NULL UNIQUE,
+		name TEXT NOT NULL,
+		gender TEXT NOT NULL,
+		gender_probability REAL NOT NULL,
+		sample_size INTEGER NOT NULL,
+		age INTEGER NOT NULL,
+		age_group TEXT NOT NULL,
+		country_id TEXT NOT NULL,
+		country_probability REAL NOT NULL,
+		created_at TEXT NOT NULL
+	);
+`);
+
+export default db;
