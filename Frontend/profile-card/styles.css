@@ -1,0 +1,256 @@
+:root {
+  --bg-1: #f7f9ff;
+  --bg-2: #e6eeff;
+  --card: #ffffff;
+  --text-strong: #0f172a;
+  --text-normal: #27344d;
+  --text-soft: #4f6282;
+  --border: #cbd7f0;
+  --focus: #0c66ff;
+  --chip-bg: #eef4ff;
+  --chip-text: #163b75;
+  --chip-dislike-bg: #fff1ee;
+  --chip-dislike-text: #8d2e1f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  color: var(--text-normal);
+  background:
+    radial-gradient(circle at 15% 0%, var(--bg-2), transparent 40%),
+    linear-gradient(180deg, var(--bg-1) 0%, #f9fbff 100%);
+}
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 14px;
+}
+
+.profile-card {
+  width: min(920px, 100%);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 30px 65px rgba(26, 43, 84, 0.14);
+  display: grid;
+  gap: 20px;
+  padding: 20px;
+}
+
+.profile-card__header {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.profile-card__figure {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.profile-card__avatar {
+  width: 180px;
+  height: 180px;
+  max-width: 100%;
+  object-fit: cover;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+}
+
+.profile-card__caption {
+  font-size: 0.84rem;
+  color: var(--text-soft);
+}
+
+.profile-card__identity {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-card__name {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+  line-height: 1.1;
+}
+
+.profile-card__bio {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-normal);
+  overflow-wrap: anywhere;
+}
+
+.profile-card__time {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #1948a0;
+  background: #edf3ff;
+  border: 1px solid #c1d4ff;
+  border-radius: 10px;
+  width: fit-content;
+  padding: 8px 10px;
+}
+
+.profile-card__controls,
+.profile-card__social,
+.profile-card__list-section {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  background: #fcfdff;
+}
+
+.profile-card__controls {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-card__section-title {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.profile-card__label {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+.profile-card__input {
+  width: 100%;
+  border: 1px solid #b7c8eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text-strong);
+  background: #fff;
+}
+
+.profile-card__input--file {
+  padding: 8px;
+}
+
+.profile-card__button {
+  width: fit-content;
+  border: 1px solid #0c66ff;
+  background: #0c66ff;
+  color: #fff;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-card__button:hover {
+  background: #0a57d8;
+}
+
+.profile-card__social-list,
+.profile-card__list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-card__social-link,
+.profile-card__list-item {
+  border: 1px solid #bfd2f8;
+  border-radius: 999px;
+  padding: 6px 11px;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.profile-card__social-link {
+  display: inline-block;
+  text-decoration: none;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+}
+
+.profile-card__social-link:hover {
+  background: #dce9ff;
+}
+
+.profile-card__list-item {
+  background: var(--chip-bg);
+  color: var(--chip-text);
+}
+
+.profile-card__list-section[data-testid="test-user-dislikes-section"] .profile-card__list-item {
+  background: var(--chip-dislike-bg);
+  border-color: #f5b8ab;
+  color: var(--chip-dislike-text);
+}
+
+.profile-card__lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .profile-card {
+    padding: 16px;
+  }
+
+  .profile-card__header {
+    grid-template-columns: 140px 1fr;
+  }
+
+  .profile-card__avatar {
+    width: 140px;
+    height: 140px;
+  }
+}
+
+@media (max-width: 700px) {
+  .profile-card__header {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-card__figure {
+    justify-items: center;
+  }
+
+  .profile-card__identity {
+    text-align: center;
+  }
+
+  .profile-card__time {
+    margin-inline: auto;
+  }
+
+  .profile-card__lists {
+    grid-template-columns: 1fr;
+  }
+}

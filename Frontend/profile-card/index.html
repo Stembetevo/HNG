@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Accessible Profile Card</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-testid="test-page-body">
+    <main class="page" data-testid="test-page-main">
+      <article class="profile-card" data-testid="test-profile-card" aria-label="Developer profile card">
+        <header class="profile-card__header" data-testid="test-profile-header">
+          <figure class="profile-card__figure" data-testid="test-profile-figure">
+            <img
+              class="profile-card__avatar"
+              data-testid="test-user-avatar"
+              src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80"
+              alt="Portrait of Maya, a frontend engineer smiling"
+            />
+            <figcaption class="profile-card__caption" data-testid="test-profile-caption">
+              Product-minded frontend engineer
+            </figcaption>
+          </figure>
+
+          <div class="profile-card__identity" data-testid="test-profile-identity">
+            <h1 class="profile-card__name" data-testid="test-user-name">Maya Linton</h1>
+            <p class="profile-card__bio" data-testid="test-user-bio">
+              I design and build delightful interfaces with strong accessibility foundations, tight feedback loops,
+              and measurable product impact.
+            </p>
+            <p class="profile-card__time" data-testid="test-user-time" aria-live="polite" aria-atomic="true">
+              0
+            </p>
+          </div>
+        </header>
+
+        <section class="profile-card__controls" data-testid="test-profile-controls" aria-label="Avatar controls">
+          <h2 class="profile-card__section-title" data-testid="test-controls-title">Avatar Source</h2>
+
+          <label class="profile-card__label" data-testid="test-avatar-url-label" for="avatar-url-input">
+            Avatar URL
+          </label>
+          <input
+            id="avatar-url-input"
+            class="profile-card__input"
+            data-testid="test-avatar-url-input"
+            type="url"
+            placeholder="https://example.com/avatar.jpg"
+            inputmode="url"
+          />
+
+          <label class="profile-card__label" data-testid="test-avatar-file-label" for="avatar-file-input">
+            Upload Image
+          </label>
+          <input
+            id="avatar-file-input"
+            class="profile-card__input profile-card__input--file"
+            data-testid="test-avatar-file-input"
+            type="file"
+            accept="image/*"
+          />
+
+          <button class="profile-card__button" data-testid="test-avatar-apply-button" type="button">
+            Apply Avatar URL
+          </button>
+        </section>
+
+        <nav class="profile-card__social" data-testid="test-user-social-links" aria-label="Social links">
+          <h2 class="profile-card__section-title" data-testid="test-social-title">Find me online</h2>
+          <ul class="profile-card__social-list" data-testid="test-social-list">
+            <li class="profile-card__social-item" data-testid="test-user-social-github-item">
+              <a
+                class="profile-card__social-link"
+                data-testid="test-user-social-github"
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open GitHub profile in a new tab"
+              >
+                GitHub
+              </a>
+            </li>
+            <li class="profile-card__social-item" data-testid="test-user-social-twitter-item">
+              <a
+                class="profile-card__social-link"
+                data-testid="test-user-social-twitter"
+                href="https://x.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open X profile in a new tab"
+              >
+                X / Twitter
+              </a>
+            </li>
+            <li class="profile-card__social-item" data-testid="test-user-social-linkedin-item">
+              <a
+                class="profile-card__social-link"
+                data-testid="test-user-social-linkedin"
+                href="https://linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open LinkedIn profile in a new tab"
+              >
+                LinkedIn
+              </a>
+            </li>
+          </ul>
+        </nav>
+
+        <div class="profile-card__lists" data-testid="test-profile-lists">
+          <section class="profile-card__list-section" data-testid="test-user-hobbies-section" aria-labelledby="hobbies-heading">
+            <h2 class="profile-card__section-title" data-testid="test-hobbies-heading" id="hobbies-heading">Hobbies</h2>
+            <ul class="profile-card__list" data-testid="test-user-hobbies">
+              <li class="profile-card__list-item" data-testid="test-user-hobby-cycling">Sunrise cycling</li>
+              <li class="profile-card__list-item" data-testid="test-user-hobby-photography">Street photography</li>
+              <li class="profile-card__list-item" data-testid="test-user-hobby-coffee">Brewing single-origin coffee</li>
+            </ul>
+          </section>
+
+          <section class="profile-card__list-section" data-testid="test-user-dislikes-section" aria-labelledby="dislikes-heading">
+            <h2 class="profile-card__section-title" data-testid="test-dislikes-heading" id="dislikes-heading">Dislikes</h2>
+            <ul class="profile-card__list" data-testid="test-user-dislikes">
+              <li class="profile-card__list-item" data-testid="test-user-dislike-low-contrast">Low contrast text</li>
+              <li class="profile-card__list-item" data-testid="test-user-dislike-silent-failures">Silent failing forms</li>
+              <li class="profile-card__list-item" data-testid="test-user-dislike-meeting-overload">Unnecessary recurring meetings</li>
+            </ul>
+          </section>
+        </div>
+      </article>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>

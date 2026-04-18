@@ -13,7 +13,7 @@ const SAMPLE_TASK = {
   priority: "High",
   dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
   status: "In Progress",
-  tags: ["Design", "UX", "Sprint-3"],
+  
 };
 
 const STATUS_OPTIONS = ["Pending", "In Progress", "Done"];
@@ -373,23 +373,6 @@ export default function TodoCard({ task = SAMPLE_TASK }) {
         )}
       </section>
 
-      {/* ── tags ── */}
-      <ul
-        data-testid="test-todo-tags"
-        className="todo-card__tags"
-        role="list"
-        aria-label="Categories"
-      >
-        {todo.tags.map((tag) => (
-          <li
-            key={tag}
-            data-testid={`test-todo-tag-${tag.toLowerCase()}`}
-            className="tag"
-          >
-            {tag}
-          </li>
-        ))}
-      </ul>
 
       <div className="todo-card__status-controls">
         <label className="todo-card__status-label" htmlFor="todo-status-control">
