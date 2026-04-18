@@ -1,105 +1,9 @@
-import { useState, useCallback } from "react";
-
-function PencilIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 20h9"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M3 6h18"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M20 6L9 17l-5-5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect
-        x="3"
-        y="4"
-        width="18"
-        height="17"
-        rx="2"
-        stroke="currentColor"
-        strokeWidth="1.75"
-      />
-      <path
-        d="M8 2v4M16 2v4M3 9h18"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
-      <path
-        d="M12 7v5l3 2"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FaRegTrashAlt } from "react-icons/fa";
+import { RiPencilFill } from "react-icons/ri";
+import { FaCalendar } from "react-icons/fa";
+import { CiClock1, CiClock2 } from "react-icons/ci";
+import { FaCheck } from "react-icons/fa";
 
 const SAMPLE_TASK = {
   id: "task-001",
@@ -112,40 +16,286 @@ const SAMPLE_TASK = {
   tags: ["Design", "UX", "Sprint-3"],
 };
 
+const STATUS_OPTIONS = ["Pending", "In Progress", "Done"];
+const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
+const COLLAPSE_THRESHOLD = 150;
+
+function normalizeTask(task) {
+  return {
+    ...task,
+    dueDate: task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate),
+    priority: PRIORITY_OPTIONS.includes(task.priority) ? task.priority : "Medium",
+    status: STATUS_OPTIONS.includes(task.status) ? task.status : "Pending",
+  };
+}
+
+function formatDueDate(date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function toDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatTimeRemaining(dueDate, now, status) {
+  if (status === "Done") {
+    return "Completed";
+  }
+
+  const diffMs = dueDate.getTime() - now.getTime();
+  const overdue = diffMs < 0;
+  const absMs = Math.abs(diffMs);
+  const minutes = Math.floor(absMs / (1000 * 60));
+  const hours = Math.floor(absMs / (1000 * 60 * 60));
+  const days = Math.floor(absMs / (1000 * 60 * 60 * 24));
+
+  if (minutes < 1) {
+    return overdue ? "Overdue by moments" : "Due now";
+  }
+
+  if (minutes < 60) {
+    return overdue
+      ? `Overdue by ${minutes} minute${minutes === 1 ? "" : "s"}`
+      : `Due in ${minutes} minute${minutes === 1 ? "" : "s"}`;
+  }
+
+  if (hours < 24) {
+    return overdue
+      ? `Overdue by ${hours} hour${hours === 1 ? "" : "s"}`
+      : `Due in ${hours} hour${hours === 1 ? "" : "s"}`;
+  }
+
+  return overdue
+    ? `Overdue by ${days} day${days === 1 ? "" : "s"}`
+    : `Due in ${days} day${days === 1 ? "" : "s"}`;
+}
+
 
 export default function TodoCard({ task = SAMPLE_TASK }) {
-  const [completed, setCompleted] = useState(false);
+  const [todo, setTodo] = useState(() => normalizeTask(task));
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValues, setEditValues] = useState(() => ({
+    title: todo.title,
+    description: todo.description,
+    priority: todo.priority,
+    dueDateInput: toDateInputValue(todo.dueDate),
+  }));
+  const [now, setNow] = useState(() => new Date());
+  const [isExpanded, setIsExpanded] = useState(() => todo.description.length <= COLLAPSE_THRESHOLD);
 
-  const dueDate = task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate);
-  const dueDateStr = dueDate.toString();
-  const dueTimeStr = dueDate.toTimeString();
-  const isOverdue = dueDate < new Date();
+  const editButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (todo.status === "Done") {
+      return undefined;
+    }
+
+    const timerId = window.setInterval(() => {
+      setNow(new Date());
+    }, 30000);
+
+    return () => window.clearInterval(timerId);
+  }, [todo.status]);
+
+  useEffect(() => {
+    if (todo.description.length <= COLLAPSE_THRESHOLD) {
+      setIsExpanded(true);
+    }
+  }, [todo.description]);
+
+  const dueDate = todo.dueDate;
+  const dueDateStr = formatDueDate(dueDate);
+  const isOverdue = dueDate.getTime() < now.getTime() && todo.status !== "Done";
+  const completed = todo.status === "Done";
+  const timeRemaining = formatTimeRemaining(dueDate, now, todo.status);
+  const hasLongDescription = todo.description.length > COLLAPSE_THRESHOLD;
+  const visibleDescription = useMemo(() => {
+    if (isExpanded || !hasLongDescription) {
+      return todo.description;
+    }
+
+    return `${todo.description.slice(0, COLLAPSE_THRESHOLD)}...`;
+  }, [hasLongDescription, isExpanded, todo.description]);
 
   const handleEdit = useCallback(() => {
-    alert('Are you sure you want to edit the task ?!');
-  }, [task.title]);
+    setEditValues({
+      title: todo.title,
+      description: todo.description,
+      priority: todo.priority,
+      dueDateInput: toDateInputValue(todo.dueDate),
+    });
+    setIsEditing(true);
+  }, [todo]);
 
   const handleDelete = useCallback(() => {
-    alert(`Are you sure you want to remove the task?`);
-  }, [task.title]);
+    window.alert(`Delete task: ${todo.title}`);
+  }, [todo.title]);
 
-  const priorityClass = `priority--${task.priority.toLowerCase()}`;
-  const statusClass = `status--${task.status.toLowerCase().replace(/\s+/g, "-")}`;
+  const closeEditMode = useCallback(() => {
+    setIsEditing(false);
+    window.requestAnimationFrame(() => {
+      editButtonRef.current?.focus();
+    });
+  }, []);
+
+  const handleSave = useCallback(
+    (event) => {
+      event.preventDefault();
+
+      const nextDate = new Date(`${editValues.dueDateInput}T23:59:00`);
+      setTodo((current) => ({
+        ...current,
+        title: editValues.title.trim() || current.title,
+        description: editValues.description.trim() || current.description,
+        priority: editValues.priority,
+        dueDate: Number.isNaN(nextDate.getTime()) ? current.dueDate : nextDate,
+      }));
+      setNow(new Date());
+      closeEditMode();
+    },
+    [closeEditMode, editValues]
+  );
+
+  const handleCancel = useCallback(() => {
+    closeEditMode();
+  }, [closeEditMode]);
+
+  const handleStatusChange = useCallback((event) => {
+    const nextStatus = event.target.value;
+    setTodo((current) => ({ ...current, status: nextStatus }));
+  }, []);
+
+  const handleCheckboxChange = useCallback((event) => {
+    const checked = event.target.checked;
+    setTodo((current) => ({
+      ...current,
+      status: checked ? "Done" : "Pending",
+    }));
+  }, []);
+
+  const priorityClass = `priority--${todo.priority.toLowerCase()}`;
+  const statusClass = `status--${todo.status.toLowerCase().replace(/\s+/g, "-")}`;
+
+  if (isEditing) {
+    return (
+      <article data-testid="test-todo-card" className="todo-card todo-card--editing">
+        <form data-testid="test-todo-edit-form" className="todo-edit-form" onSubmit={handleSave}>
+          <h3 className="todo-edit-form__title">Edit Task</h3>
+
+          <label className="todo-edit-form__field" htmlFor="todo-edit-title">
+            Title
+          </label>
+          <input
+            id="todo-edit-title"
+            data-testid="test-todo-edit-title-input"
+            className="todo-edit-form__input"
+            type="text"
+            value={editValues.title}
+            onChange={(event) => setEditValues((prev) => ({ ...prev, title: event.target.value }))}
+            required
+          />
+
+          <label className="todo-edit-form__field" htmlFor="todo-edit-description">
+            Description
+          </label>
+          <textarea
+            id="todo-edit-description"
+            data-testid="test-todo-edit-description-input"
+            className="todo-edit-form__textarea"
+            rows={5}
+            value={editValues.description}
+            onChange={(event) =>
+              setEditValues((prev) => ({ ...prev, description: event.target.value }))
+            }
+            required
+          />
+
+          <div className="todo-edit-form__row">
+            <div className="todo-edit-form__group">
+              <label className="todo-edit-form__field" htmlFor="todo-edit-priority">
+                Priority
+              </label>
+              <select
+                id="todo-edit-priority"
+                data-testid="test-todo-edit-priority-select"
+                className="todo-edit-form__select"
+                value={editValues.priority}
+                onChange={(event) =>
+                  setEditValues((prev) => ({ ...prev, priority: event.target.value }))
+                }
+              >
+                {PRIORITY_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="todo-edit-form__group">
+              <label className="todo-edit-form__field" htmlFor="todo-edit-due-date">
+                Due date
+              </label>
+              <input
+                id="todo-edit-due-date"
+                data-testid="test-todo-edit-due-date-input"
+                className="todo-edit-form__input"
+                type="date"
+                value={editValues.dueDateInput}
+                onChange={(event) =>
+                  setEditValues((prev) => ({ ...prev, dueDateInput: event.target.value }))
+                }
+                required
+              />
+            </div>
+          </div>
+
+          <div className="todo-edit-form__actions">
+            <button data-testid="test-todo-save-button" type="submit" className="todo-btn todo-btn--primary">
+              Save
+            </button>
+            <button
+              data-testid="test-todo-cancel-button"
+              type="button"
+              className="todo-btn"
+              onClick={handleCancel}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </article>
+    );
+  }
 
   return (
     <article
       data-testid="test-todo-card"
-      className="todo-card"
+      className={`todo-card ${priorityClass} ${statusClass}${isOverdue ? " todo-card--overdue" : ""}${completed ? " todo-card--done" : ""}`}
     >
       {/* ── top bar ── */}
       <div className="todo-card__topbar">
-        <span
-          data-testid="test-todo-priority"
-          className={`badge ${priorityClass}`}
-          aria-label={`Priority: ${task.priority}`}
-        >
-          {task.priority}
-        </span>
+        <div className="todo-card__priority-wrap">
+          <span
+            data-testid="test-todo-priority-indicator"
+            className={`priority-indicator priority-indicator--${todo.priority.toLowerCase()}`}
+            aria-hidden="true"
+          />
+          <span
+            data-testid="test-todo-priority"
+            className="badge"
+            aria-label={`Priority: ${todo.priority}`}
+          >
+            {todo.priority}
+          </span>
+        </div>
 
         <div className="todo-card__actions">
           <button
@@ -153,8 +303,9 @@ export default function TodoCard({ task = SAMPLE_TASK }) {
             className="icon-btn"
             onClick={handleEdit}
             aria-label="Edit task"
+            ref={editButtonRef}
           >
-            <PencilIcon />
+            <RiPencilFill />
           </button>
           <button
             data-testid="test-todo-delete-button"
@@ -162,7 +313,7 @@ export default function TodoCard({ task = SAMPLE_TASK }) {
             onClick={handleDelete}
             aria-label="Delete task"
           >
-            <TrashIcon />
+            <FaRegTrashAlt />
           </button>
         </div>
       </div>
@@ -172,14 +323,14 @@ export default function TodoCard({ task = SAMPLE_TASK }) {
         <label className="checkbox-wrap" htmlFor={`complete-${task.id}`}>
           <input
             type="checkbox"
-            id={`complete-${task.id}`}
+            id={`complete-${todo.id}`}
             data-testid="test-todo-complete-toggle"
             checked={completed}
-            onChange={(e) => setCompleted(e.target.checked)}
+            onChange={handleCheckboxChange}
             aria-label="Mark task as complete"
           />
           <span className="checkbox-custom" aria-hidden="true">
-            <CheckIcon />
+            <FaCheck />
           </span>
         </label>
 
@@ -187,17 +338,40 @@ export default function TodoCard({ task = SAMPLE_TASK }) {
           data-testid="test-todo-title"
           className="todo-card__title"
         >
-          {task.title}
+          {todo.title}
         </h3>
       </div>
 
       {/* ── description ── */}
-      <p
-        data-testid="test-todo-description"
-        className={`todo-card__desc${completed ? " todo-card__desc--done" : ""}`}
-      >
-        {task.description}
-      </p>
+      <section data-testid="test-todo-collapsible-section" className="todo-card__collapsible-section">
+        <p
+          data-testid="test-todo-description"
+          className="todo-card__desc"
+        >
+          {visibleDescription}
+        </p>
+        {hasLongDescription ? (
+          <button
+            type="button"
+            data-testid="test-todo-expand-toggle"
+            className="todo-card__expand-toggle"
+            onClick={() => setIsExpanded((current) => !current)}
+            aria-expanded={isExpanded}
+          >
+            {isExpanded ? "Show less" : "Show more"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            data-testid="test-todo-expand-toggle"
+            className="todo-card__expand-toggle"
+            disabled
+            aria-disabled="true"
+          >
+            Full description
+          </button>
+        )}
+      </section>
 
       {/* ── tags ── */}
       <ul
@@ -206,7 +380,7 @@ export default function TodoCard({ task = SAMPLE_TASK }) {
         role="list"
         aria-label="Categories"
       >
-        {task.tags.map((tag) => (
+        {todo.tags.map((tag) => (
           <li
             key={tag}
             data-testid={`test-todo-tag-${tag.toLowerCase()}`}
@@ -217,6 +391,26 @@ export default function TodoCard({ task = SAMPLE_TASK }) {
         ))}
       </ul>
 
+      <div className="todo-card__status-controls">
+        <label className="todo-card__status-label" htmlFor="todo-status-control">
+          Status
+        </label>
+        <select
+          id="todo-status-control"
+          data-testid="test-todo-status-control"
+          className="todo-card__status-select"
+          value={todo.status}
+          onChange={handleStatusChange}
+          aria-label="Task status"
+        >
+          {STATUS_OPTIONS.map((statusOption) => (
+            <option key={statusOption} value={statusOption}>
+              {statusOption}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* ── footer ── */}
       <div className="todo-card__footer">
         <div className="todo-card__dates">
@@ -226,28 +420,36 @@ export default function TodoCard({ task = SAMPLE_TASK }) {
             className="due-date"
             aria-label={`Due date: ${dueDateStr}`}
           >
-            <CalendarIcon />
-            {dueDateStr}
+            <FaCalendar />
+            Due {dueDateStr}
           </time>
 
           <time
             data-testid="test-todo-time-remaining"
             dateTime={dueDate.toISOString()}
             className={`time-remaining${isOverdue ? " time-remaining--overdue" : ""}`}
-            aria-label={`Due time: ${dueTimeStr}`}
+            aria-label={`Time remaining: ${timeRemaining}`}
           >
-            <ClockIcon />
-            {dueTimeStr}
+            <CiClock1 />
+            {timeRemaining}
           </time>
+
+          <span
+            data-testid="test-todo-overdue-indicator"
+            className={`overdue-indicator${isOverdue ? " overdue-indicator--active" : ""}`}
+            role="status"
+          >
+            {completed ? "Completed" : isOverdue ? "Overdue" : "On track"}
+          </span>
         </div>
 
         <span
           data-testid="test-todo-status"
           className={`status-badge ${statusClass}`}
-          aria-label={`Status: ${task.status}`}
+          aria-label={`Status: ${todo.status}`}
         >
           <span className="status-dot" aria-hidden="true" />
-          {task.status}
+          {todo.status}
         </span>
       </div>
     </article>
