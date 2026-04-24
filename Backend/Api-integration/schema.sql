@@ -1,14 +1,13 @@
 
-CREATE TABLE Profiles(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    normalized_name VARCHAR(20) UNIQUE,
-    name VARCHAR(20),
-    gender VARCHAR(20),
-    gender_probability FLOAT,
-    sample_size FLOAT,
-    age INT ,
-    age_group VARCHAR(20) ,
-    country_id INT,
-    country_probability VARCHAR(20),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE profiles (
+    id TEXT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE COLLATE NOCASE,
+    gender VARCHAR(20) NOT NULL COLLATE NOCASE,
+    gender_probability FLOAT NOT NULL,
+    age INT NOT NULL,
+    age_group VARCHAR(20) NOT NULL COLLATE NOCASE,
+    country_id VARCHAR(2) NOT NULL COLLATE NOCASE,
+    country_name VARCHAR(255) NOT NULL,
+    country_probability FLOAT NOT NULL,
+    created_at TIMESTAMP NOT NULL
 );

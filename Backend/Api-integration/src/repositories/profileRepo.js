@@ -10,21 +10,19 @@ const rowToProfile = (row) => {
 		name: row.name,
 		gender: row.gender,
 		gender_probability: row.gender_probability,
-		sample_size: row.sample_size,
 		age: row.age,
 		age_group: row.age_group,
 		country_id: row.country_id,
+		country_name: row.country_name,
 		country_probability: row.country_probability,
 		created_at: row.created_at
 	};
 };
 
-export function findProfileByNormalizedName(normalizedName) {
-	const stmt = db.prepare(
-		`SELECT * FROM profiles WHERE normalized_name = ? LIMIT 1`
-	);
+export function findProfileByName(name) {
+	const stmt = db.prepare(`SELECT * FROM profiles WHERE name = ? COLLATE NOCASE LIMIT 1`);
 
-	return rowToProfile(stmt.get(normalizedName));
+	return rowToProfile(stmt.get(name));
 }
 
 export function findProfileById(id) {
@@ -34,64 +32,112 @@ export function findProfileById(id) {
 
 export function insertProfile(profile) {
 	const stmt = db.prepare(`
-		INSERT INTO profiles (
+		INSERT OR IGNORE INTO profiles (
 			id,
-			normalized_name,
 			name,
 			gender,
 			gender_probability,
-			sample_size,
 			age,
 			age_group,
 			country_id,
+			country_name,
 			country_probability,
 			created_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`);
 
-	stmt.run(
+	return stmt.run(
 		profile.id,
-		profile.normalized_name,
 		profile.name,
 		profile.gender,
 		profile.gender_probability,
-		profile.sample_size,
 		profile.age,
 		profile.age_group,
 		profile.country_id,
+		profile.country_name,
 		profile.country_probability,
 		profile.created_at
 	);
 }
 
-export function listProfiles(filters = {}) {
+function buildWhereClause(filters = {}) {
 	const clauses = [];
 	const params = [];
 
 	if (filters.gender) {
-		clauses.push("LOWER(gender) = LOWER(?)");
+		clauses.push("gender = ? COLLATE NOCASE");
 		params.push(filters.gender);
 	}
 
 	if (filters.country_id) {
-		clauses.push("LOWER(country_id) = LOWER(?)");
+		clauses.push("country_id = ? COLLATE NOCASE");
 		params.push(filters.country_id);
 	}
 
 	if (filters.age_group) {
-		clauses.push("LOWER(age_group) = LOWER(?)");
+		clauses.push("age_group = ? COLLATE NOCASE");
 		params.push(filters.age_group);
 	}
 
-	const whereClause = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+	if (Number.isFinite(filters.min_age)) {
+		clauses.push("age >= ?");
+		params.push(filters.min_age);
+	}
+
+	if (Number.isFinite(filters.max_age)) {
+		clauses.push("age <= ?");
+		params.push(filters.max_age);
+	}
+
+	if (Number.isFinite(filters.min_gender_probability)) {
+		clauses.push("gender_probability >= ?");
+		params.push(filters.min_gender_probability);
+	}
+
+	if (Number.isFinite(filters.min_country_probability)) {
+		clauses.push("country_probability >= ?");
+		params.push(filters.min_country_probability);
+	}
+
+	return {
+		whereClause: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "",
+		params
+	};
+}
+
+export function listProfiles({ filters = {}, sortBy = "created_at", order = "desc", page = 1, limit = 10 } = {}) {
+	const sortColumn = {
+		age: "age",
+		created_at: "created_at",
+		gender_probability: "gender_probability"
+	}[sortBy] ?? "created_at";
+	const sortDirection = order === "asc" ? "ASC" : "DESC";
+	const offset = (page - 1) * limit;
+	const { whereClause, params } = buildWhereClause(filters);
+	const totalStmt = db.prepare(`SELECT COUNT(*) AS total FROM profiles ${whereClause}`);
+	const total = totalStmt.get(...params).total;
 	const stmt = db.prepare(`
-		SELECT id, name, gender, age, age_group, country_id
+		SELECT
+			id,
+			name,
+			gender,
+			gender_probability,
+			age,
+			age_group,
+			country_id,
+			country_name,
+			country_probability,
+			created_at
 		FROM profiles
 		${whereClause}
-		ORDER BY created_at DESC
+		ORDER BY ${sortColumn} ${sortDirection}, id ${sortDirection}
+		LIMIT ? OFFSET ?
 	`);
 
-	return stmt.all(...params);
+	return {
+		total,
+		data: stmt.all(...params, limit, offset).map(rowToProfile)
+	};
 }
 
 export function deleteProfileById(id) {
