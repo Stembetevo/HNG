@@ -313,12 +313,34 @@ export async function listAllProfiles(req, res, next) {
         }
 
         const result = await getProfiles(parsed);
+        const totalPages = Math.ceil(result.total / parsed.limit);
+        
+        // Build pagination links
+        const baseUrl = `/api/profiles`;
+        const queryParams = new URLSearchParams();
+        
+        for (const [key, value] of Object.entries(parsed.filters || {})) {
+            queryParams.append(key, value);
+        }
+        if (parsed.sortBy) queryParams.append('sort_by', parsed.sortBy);
+        if (parsed.order) queryParams.append('order', parsed.order);
+        queryParams.append('limit', parsed.limit);
+        
+        const queryString = queryParams.toString() ? `&${queryParams.toString()}` : '';
+        
+        const links = {
+            self: `${baseUrl}?page=${parsed.page}${queryString}`,
+            next: parsed.page < totalPages ? `${baseUrl}?page=${parsed.page + 1}${queryString}` : null,
+            prev: parsed.page > 1 ? `${baseUrl}?page=${parsed.page - 1}${queryString}` : null
+        };
 
         return res.status(200).json({
             status: "success",
             page: parsed.page,
             limit: parsed.limit,
             total: result.total,
+            total_pages: totalPages,
+            links,
             data: result.data
         });
     } catch (error) {
@@ -334,12 +356,32 @@ export async function searchProfiles(req, res, next) {
         }
 
         const result = await getProfiles(parsed);
+        const totalPages = Math.ceil(result.total / parsed.limit);
+        
+        // Build pagination links
+        const baseUrl = `/api/profiles/search`;
+        const queryParams = new URLSearchParams();
+        
+        if (parsed.filters?.q) queryParams.append('q', parsed.filters.q);
+        if (parsed.sortBy) queryParams.append('sort_by', parsed.sortBy);
+        if (parsed.order) queryParams.append('order', parsed.order);
+        queryParams.append('limit', parsed.limit);
+        
+        const queryString = queryParams.toString() ? `&${queryParams.toString()}` : '';
+        
+        const links = {
+            self: `${baseUrl}?page=${parsed.page}${queryString}`,
+            next: parsed.page < totalPages ? `${baseUrl}?page=${parsed.page + 1}${queryString}` : null,
+            prev: parsed.page > 1 ? `${baseUrl}?page=${parsed.page - 1}${queryString}` : null
+        };
 
         return res.status(200).json({
             status: "success",
             page: parsed.page,
             limit: parsed.limit,
             total: result.total,
+            total_pages: totalPages,
+            links,
             data: result.data
         });
     } catch (error) {
@@ -360,6 +402,80 @@ export async function deleteProfile(req, res, next) {
     } catch (error) {
         return next(error);
     }
+}
+
+/**
+ * Export profiles as CSV
+ */
+export async function exportProfiles(req, res, next) {
+    try {
+        const parsed = buildListFilters(req.query ?? {});
+        if (parsed.error) {
+            return statusError(res, parsed.error.message, parsed.error.statusCode);
+        }
+
+        // Get all profiles with filters (but no pagination limit)
+        const result = await getProfiles({
+            ...parsed,
+            limit: 50000 // Large limit to get all matching profiles
+        });
+
+        if (!result.data || result.data.length === 0) {
+            return statusError(res, 'No profiles to export', 404);
+        }
+
+        // Build CSV header
+        const headers = [
+            'id',
+            'name',
+            'gender',
+            'gender_probability',
+            'age',
+            'age_group',
+            'country_id',
+            'country_name',
+            'country_probability',
+            'created_at'
+        ];
+        
+        const csv = buildCSV(headers, result.data);
+        
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `profiles_${timestamp}.csv`;
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        
+        return res.send(csv);
+    } catch (error) {
+        return next(error);
+    }
+}
+
+/**
+ * Build CSV string from data
+ */
+function buildCSV(headers, data) {
+    // Escape CSV values
+    const escapeCSV = (value) => {
+        if (value === null || value === undefined) return '';
+        const stringValue = String(value);
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+            return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+    };
+    
+    // Build header line
+    const headerLine = headers.map(h => escapeCSV(h)).join(',');
+    
+    // Build data lines
+    const dataLines = data.map(row =>
+        headers.map(header => escapeCSV(row[header])).join(',')
+    );
+    
+    return [headerLine, ...dataLines].join('\n');
 }
 
 export const classifyProfile = createProfile;

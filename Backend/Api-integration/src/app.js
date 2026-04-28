@@ -1,32 +1,44 @@
 import express from "express";
 import cors from "cors";
 import classifyRoutes from "./routes/routes.js";
+import authRoutes from "./routes/authRoutes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { statusError } from "./utils/response.js";
+import { loggingMiddleware } from "./middleware/logging.js";
+import { apiVersionMiddleware } from "./middleware/apiVersion.js";
+import config from "./config/index.js";
 
 const app = express();
 
 app.use(
     cors({
-        origin: "*"
+        origin: config.corsOrigin,
+        credentials: true
     })
 );
 
 app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Origin", config.corsOrigin.join(", "));
+    res.setHeader("Access-Control-Allow-Credentials", "true");
     next();
 });
 
 app.use(express.json());
+app.use(loggingMiddleware);
 
 app.get("/", (req, res) => {
     return res.status(200).json({
         status: "success",
-        message: "API integration backend is running"
+        message: "Insighta Labs+ API is running",
+        version: "1.0.0"
     });
 });
 
-app.use("/api", classifyRoutes);
+// Authentication routes (no version required)
+app.use("/auth", authRoutes);
+
+// Profile API routes (version required)
+app.use("/api", apiVersionMiddleware, classifyRoutes);
 
 app.use((req, res) => {
     return statusError(res, "Route not found", 404);

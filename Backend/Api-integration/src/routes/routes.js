@@ -5,16 +5,26 @@ import {
 	deleteProfile,
 	getProfile,
 	listAllProfiles,
-	searchProfiles
+	searchProfiles,
+	exportProfiles
 } from "../controllers/ProfileController.js";
+import { authMiddleware, requireRole } from "../middleware/authMiddleware.js";
+import { apiLimiter } from "../middleware/rateLimiter.js";
 
 const router = Router();
 
+// Apply rate limiting to all /api routes
+router.use(apiLimiter);
+
+// Public endpoints (no auth required)
 router.get("/classify", classifyName);
-router.post("/profiles", createProfile);
-router.get("/profiles/search", searchProfiles);
-router.get("/profiles", listAllProfiles);
-router.get("/profiles/:id", getProfile);
-router.delete("/profiles/:id", deleteProfile);
+
+// Protected endpoints (authentication required)
+router.post("/profiles", authMiddleware, requireRole("admin"), createProfile);
+router.get("/profiles/search", authMiddleware, searchProfiles);
+router.get("/profiles/export", authMiddleware, exportProfiles);
+router.get("/profiles", authMiddleware, listAllProfiles);
+router.get("/profiles/:id", authMiddleware, getProfile);
+router.delete("/profiles/:id", authMiddleware, requireRole("admin"), deleteProfile);
 
 export default router;

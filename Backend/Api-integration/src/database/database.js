@@ -195,7 +195,48 @@ function migrateProfilesTable() {
 	}
 }
 
+function createUsersTable() {
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS users (
+			id TEXT PRIMARY KEY,
+			github_id TEXT NOT NULL UNIQUE,
+			username TEXT NOT NULL UNIQUE,
+			email TEXT,
+			avatar_url TEXT,
+			role TEXT NOT NULL DEFAULT 'analyst',
+			is_active INTEGER NOT NULL DEFAULT 1,
+			last_login_at TEXT,
+			created_at TEXT NOT NULL
+		);
+	`);
+}
+
+function createRefreshTokensTable() {
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS refresh_tokens (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL,
+			token_hash TEXT NOT NULL UNIQUE,
+			expires_at TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		);
+	`);
+}
+
+function createAuthIndexes() {
+	db.exec(`
+		CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id);
+		CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
+	`);
+}
+
 migrateProfilesTable();
+createUsersTable();
+createRefreshTokensTable();
+createAuthIndexes();
 seedProfilesFromAvailableFile(db);
 
 export default db;
