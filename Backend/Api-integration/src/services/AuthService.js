@@ -6,6 +6,7 @@ import db from '../database/database.js';
 import config from '../config/index.js';
 
 const GITHUB_API_BASE = 'https://api.github.com';
+const GITHUB_OAUTH_BASE = 'https://github.com';
 
 /**
  * Create access token
@@ -77,27 +78,48 @@ export async function verifyAndInvalidateRefreshToken(userId, refreshToken) {
         // Decode token to verify JWT signature
         const decoded = jwt.verify(refreshToken, config.jwt.refreshSecret);
         
+        // Verify token type
+        if (decoded.type !== 'refresh') {
+            return {
+                valid:false,
+                error:'Invalid token type'
+            }
+        }
+
         if (decoded.userId !== userId) {
             return { valid: false, error: 'User ID mismatch' };
         }
         
         const tokenHash = hashToken(refreshToken);
         
-        // Check if token exists and hasnt expired
-        const stmt = db.prepare(`
-            SELECT * FROM refresh_tokens 
-            WHERE user_id = ? AND token_hash = ? AND expires_at > datetime('now')
-        `);
-        
-        const token = stmt.get(userId, tokenHash);
-        
-        if (!token) {
-            return { valid: false, error: 'Token not found or expired' };
+        // Atomic delete operation: delete only valid, non-expired tokens
+        // Use a transaction to ensure this is atomic
+        try {
+            db.exec('BEGIN');
+            
+            // Delete token and check if any row was actually deleted
+            const deleteStmt = db.prepare(`
+                DELETE FROM refresh_tokens 
+                WHERE user_id = ? AND token_hash = ? AND expires_at > datetime('now')
+            `);
+            
+            const result = deleteStmt.run(userId, tokenHash);
+            const deletedRowCount = result.changes;
+            
+            db.exec('COMMIT');
+            
+            // If no rows were deleted, token was not found or expired
+            if (deletedRowCount === 0) {
+                return { valid: false, error: 'Token not found or expired' };
+            }
+        } catch (txnError) {
+            try {
+                db.exec('ROLLBACK');
+            } catch (e) {
+                // ignore rollback errors
+            }
+            throw txnError;
         }
-        
-        // Invalidate the token by deleting it
-        const deleteStmt = db.prepare('DELETE FROM refresh_tokens WHERE id = ?');
-        deleteStmt.run(token.id);
         
         return { valid: true, decoded };
     } catch (error) {
@@ -142,12 +164,13 @@ export async function exchangeGitHubCode(code, codeVerifier, redirectUri) {
         }
 
         const tokenResponse = await axios.post(
-            `${GITHUB_API_BASE}/login/oauth/access_token`,
+            `${GITHUB_OAUTH_BASE}/login/oauth/access_token`,
             body,
             {
                 headers: {
                     Accept: 'application/json'
-                }
+                },
+                timeout: 10000
             }
         );
         
@@ -165,7 +188,8 @@ export async function exchangeGitHubCode(code, codeVerifier, redirectUri) {
             headers: {
                 Authorization: `Bearer ${githubAccessToken}`,
                 Accept: 'application/vnd.github.v3+json'
-            }
+            },
+            timeout: 5000
         });
         
         const githubUser = userResponse.data;
@@ -195,21 +219,25 @@ export async function createOrUpdateUser(githubId, username, email, avatarUrl) {
     try {
         // Check if user exists
         const selectStmt = db.prepare('SELECT * FROM users WHERE github_id = ?');
-        const existingUser = selectStmt.get(githubId);
-        
         if (existingUser) {
             // Update last login
+            const now = new Date().toISOString();
             const updateStmt = db.prepare(`
                 UPDATE users 
                 SET last_login_at = ?, email = ?, avatar_url = ?
                 WHERE id = ?
             `);
             
-            updateStmt.run(new Date().toISOString(), email, avatarUrl, existingUser.id);
+            updateStmt.run(now, email, avatarUrl, existingUser.id);
             
             return {
                 success: true,
-                user: existingUser,
+                user: {
+                    ...existingUser,
+                    email,
+                    avatar_url: avatarUrl,
+                    last_login_at: now
+                },
                 isNew: false
             };
         }
@@ -263,7 +291,7 @@ export async function createOrUpdateUser(githubId, username, email, avatarUrl) {
 /**
  * Get user by ID
  */
-export function getUserById(userId) {
+export async function getUserById(userId) {
     try {
         const stmt = db.prepare('SELECT * FROM users WHERE id = ?');
         return stmt.get(userId) || null;

@@ -17,12 +17,6 @@ app.use(
     })
 );
 
-app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", config.corsOrigin.join(", "));
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    next();
-});
-
 app.use(express.json());
 app.use(loggingMiddleware);
 
@@ -36,6 +30,7 @@ app.get("/", (req, res) => {
 
 // Authentication routes (no version required)
 app.use("/auth", authRoutes);
+app.use("/api/auth", authRoutes);
 
 // Profile API routes (version required)
 app.use("/api", apiVersionMiddleware, classifyRoutes);

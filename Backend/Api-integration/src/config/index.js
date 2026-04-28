@@ -8,7 +8,7 @@ export const config = {
     github: {
         clientId: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
-        redirectUri: process.env.GITHUB_REDIRECT_URI || 'http://localhost:3000/auth/github/callback'
+        redirectUri: process.env.GITHUB_REDIRECT_URI || 'http://localhost:3000/api/auth/callback/github'
     },
     
     // JWT
@@ -26,7 +26,10 @@ export const config = {
     webPortalUrl: process.env.WEB_PORTAL_URL || 'http://localhost:5173',
     
     // CORS
-    corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000').split(',')
+    corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000')
+        .split(',')
+        .map(origin => origin.trim())
+        .filter(origin => origin.length > 0)
 };
 
 // Validate required environment variables

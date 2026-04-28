@@ -12,30 +12,77 @@ import {
 import { statusSuccess, statusError } from '../utils/response.js';
 import config from '../config/index.js';
 import crypto from 'crypto';
+import { parseCookies } from '../utils/cookies.js';
 
 const // store temporary OAuth states (in production, use Redis)
 oauthStates = new Map();
 const STATE_EXPIRY = 10 * 60 * 1000; // 10 minutes
+
+function isWebMode(req) {
+    return req.query?.mode === 'web';
+}
+
+function getGitHubRedirectUri(webMode) {
+    return webMode ? `${config.github.redirectUri}?mode=web` : config.github.redirectUri;
+}
+
+function cookieOptions(maxAge) {
+    return {
+        httpOnly: true,
+        secure: config.nodeEnv === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge
+    };
+}
+
+function setSessionCookies(res, accessToken, refreshToken) {
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+    res.cookie('access_token', accessToken, cookieOptions(config.jwt.accessTokenExpiry * 1000));
+    res.cookie('refresh_token', refreshToken, cookieOptions(config.jwt.refreshTokenExpiry * 1000));
+    res.cookie('csrf_token', csrfToken, {
+        httpOnly: false,
+        secure: config.nodeEnv === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: config.jwt.refreshTokenExpiry * 1000
+    });
+
+    return csrfToken;
+}
+
+function clearSessionCookies(res) {
+    const options = { path: '/' };
+    res.clearCookie('access_token', options);
+    res.clearCookie('refresh_token', options);
+    res.clearCookie('csrf_token', options);
+}
 
 /**
  * Initiate GitHub OAuth flow
  */
 export async function initiateGitHubOAuth(req, res) {
     try {
+        const webMode = isWebMode(req);
         const state = crypto.randomBytes(32).toString('hex');
         const expiresAt = Date.now() + STATE_EXPIRY;
         
-        oauthStates.set(state, { expiresAt });
+        oauthStates.set(state, { expiresAt, webMode });
+        const redirectUri = getGitHubRedirectUri(webMode);
         
         const params = new URLSearchParams({
             client_id: config.github.clientId,
-            redirect_uri: config.github.redirectUri,
+            redirect_uri: redirectUri,
             scope: 'user:email',
             state,
             allow_signup: 'true'
         });
         
         const redirectUrl = `https://github.com/login/oauth/authorize?${params}`;
+
+        if (webMode) {
+            return res.redirect(302, redirectUrl);
+        }
         
         return res.json({
             status: 'success',
@@ -74,28 +121,29 @@ export async function handleGitHubCallback(req, res) {
         
         // Clean up state
         oauthStates.delete(state);
+        const webMode = Boolean(storedState.webMode);
+        const redirectUri = getGitHubRedirectUri(webMode);
         
         // Exchange code for user info
-        const result = await exchangeGitHubCode(code, undefined);
+        const result = await exchangeGitHubCode(code, undefined, redirectUri);
         
         if (!result.success) {
             return statusError(res, result.error, 401);
         }
         
         // Create or update user
-        const { user: githubUser, isNew } = result;
-        const userResult = await createOrUpdateUser(
+        const { user: githubUser } = result;
+        const {success, error, user, isNew} = await createOrUpdateUser(
             githubUser.githubId,
             githubUser.username,
             githubUser.email,
             githubUser.avatarUrl
         );
         
-        if (!userResult.success) {
-            return statusError(res, userResult.error, 500);
+        if(!success){
+            return statusError(res, error, 500);
         }
         
-        const user = userResult.user;
         
         // Check if user is active
         if (!user.is_active) {
@@ -108,6 +156,11 @@ export async function handleGitHubCallback(req, res) {
         
         // Store refresh token
         await storeRefreshToken(user.id, refreshToken);
+
+        if (webMode) {
+            setSessionCookies(res, accessToken, refreshToken);
+            return res.redirect(302, config.webPortalUrl);
+        }
         
         return res.json({
             status: 'success',
@@ -141,7 +194,7 @@ export async function startCliOAuth(req, res) {
             return statusError(res, 'code_challenge and redirect_uri are required', 400);
         }
 
-        const state = require('crypto').randomBytes(32).toString('hex');
+        const state = crypto.randomBytes(32).toString('hex');
         const expiresAt = Date.now() + STATE_EXPIRY;
         
         // Store state along with the expected redirect URI and code_challenge
@@ -248,15 +301,18 @@ export async function cliCallbackExchange(req, res) {
 export async function refreshAccessToken(req, res) {
     try {
         const { refresh_token } = req.body;
+        const cookies = parseCookies(req.headers.cookie || '');
+        const tokenFromCookie = cookies.refresh_token;
+        const refreshTokenValue = refresh_token || tokenFromCookie;
         
-        if (!refresh_token) {
+        if (!refreshTokenValue) {
             return statusError(res, 'Refresh token is required', 400);
         }
         
         // Decode and verify the refresh token
         let decoded;
         try {
-            decoded = jwt.verify(refresh_token, config.jwt.refreshSecret);
+            decoded = jwt.verify(refreshTokenValue, config.jwt.refreshSecret);
         } catch (error) {
             return statusError(res, 'Invalid or expired refresh token', 401);
         }
@@ -266,14 +322,14 @@ export async function refreshAccessToken(req, res) {
         }
         
         // Verify and invalidate the refresh token
-        const result = await verifyAndInvalidateRefreshToken(decoded.userId, refresh_token);
+        const result = await verifyAndInvalidateRefreshToken(decoded.userId, refreshTokenValue);
         
         if (!result.valid) {
             return statusError(res, result.error || 'Invalid refresh token', 401);
         }
         
         // Get user info
-        const user = getUserById(decoded.userId);
+        const user = await getUserById(decoded.userId);
         
         if (!user) {
             return statusError(res, 'User not found', 404);
@@ -289,6 +345,10 @@ export async function refreshAccessToken(req, res) {
         
         // Store new refresh token
         await storeRefreshToken(user.id, newRefreshToken);
+
+        if (tokenFromCookie) {
+            setSessionCookies(res, newAccessToken, newRefreshToken);
+        }
         
         return res.json({
             status: 'success',
@@ -309,6 +369,8 @@ export async function refreshAccessToken(req, res) {
 export async function logout(req, res) {
     try {
         const userId = req.userId; // Set by auth middleware
+        const cookies = parseCookies(req.headers.cookie || '');
+        const refreshTokenValue = req.body?.refresh_token || cookies.refresh_token;
         
         if (!userId) {
             return statusError(res, 'User not authenticated', 401);
@@ -319,6 +381,10 @@ export async function logout(req, res) {
         
         if (!result.success) {
             return statusError(res, result.error, 500);
+        }
+
+        if (refreshTokenValue || cookies.access_token) {
+            clearSessionCookies(res);
         }
         
         return statusSuccess(res, { message: 'Logged out successfully' });
@@ -331,7 +397,7 @@ export async function logout(req, res) {
 /**
  * Get current user info
  */
-export function getCurrentUser(req, res) {
+export async function getCurrentUser(req, res) {
     try {
         const userId = req.userId;
         
@@ -339,7 +405,7 @@ export function getCurrentUser(req, res) {
             return statusError(res, 'User not authenticated', 401);
         }
         
-        const user = getUserById(userId);
+        const user = await getUserById(userId);
         
         if (!user) {
             return statusError(res, 'User not found', 404);

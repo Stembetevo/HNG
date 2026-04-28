@@ -9,6 +9,7 @@ import {
     getCurrentUser
 } from '../controllers/AuthController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
+import { requireCsrf } from '../middleware/csrf.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
@@ -22,10 +23,10 @@ router.post('/cli/start', authLimiter, startCliOAuth);
 router.post('/cli/callback', authLimiter, cliCallbackExchange);
 
 // Token management
-router.post('/refresh', authLimiter, refreshAccessToken);
+router.post('/refresh', authLimiter, requireCsrf, refreshAccessToken);
 
 // User logout
-router.post('/logout', authMiddleware, logout);
+router.post('/logout', authMiddleware, requireCsrf, logout);
 
 // Get current user
 router.get('/me', authMiddleware, getCurrentUser);

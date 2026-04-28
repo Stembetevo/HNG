@@ -1,86 +1,38 @@
-# Todo Card
+# Insighta Labs+ Portal
 
-A React + Vite Todo Card interface with task details, status badge, tags, due time display, and completion interactions.
+A React + Vite web portal for Insighta Labs+. It uses the backend GitHub OAuth flow, httpOnly cookies, CSRF-protected mutations, and the same profile APIs as the CLI.
 
-## What You Have Implemented
+## Features
 
-- Built a reusable `TodoCard` component with:
-- Priority badge (`High`, `Medium`, `Low`)
-- Status badge (`In Progress`, `Todo`, `Done`)
-- Task title, description, and tags
-- Edit and delete action buttons
-- Completion checkbox
-- Native Date display using JavaScript `Date` output (no custom formatting library)
-- Applied completion behavior:
-- When checked, task description is struck through
-- Status badge styling remains tied to the task status value (does not auto-switch to done)
-- Improved layout:
-- Card is centered on screen
-- Refined card and badge styling in `App.css` and `index.css`
+- GitHub OAuth login through the backend
+- Dashboard with live dataset metrics
+- Profiles list with filtering, sorting, pagination, and CSV export
+- Natural-language search page
+- Profile detail page
+- Account page with role and session information
 
-## Tech Stack
+## Environment
 
-- React 19
-- Vite 8
-- ESLint 9
-- pnpm
+Create a local `.env` file from `.env.example`:
+
+```bash
+VITE_API_BASE_URL=http://localhost:3000
+```
 
 ## Run Locally
 
-1. Install dependencies:
-
 ```bash
 pnpm install
-```
-
-2. Start development server:
-
-```bash
 pnpm dev
 ```
 
-3. Build for production:
+## Build
 
 ```bash
 pnpm build
 ```
 
-4. Preview production build:
+## Notes
 
-```bash
-pnpm preview
-```
-
-## GitHub Pages Deployment
-
-This project includes a GitHub Actions workflow at `.github/workflows/deploy.yml`.
-
-### How it works
-
-- Installs dependencies with `pnpm`
-- Builds with Vite
-- Sets `--base=/<repo-name>/` automatically during CI build
-- Uploads build artifacts
-- Deploys to GitHub Pages
-
-### One-time GitHub setup
-
-1. Push this project to GitHub.
-2. In your repository, go to `Settings > Pages`.
-3. Under `Build and deployment`, set `Source` to `GitHub Actions`.
-4. Push to `main` (or run workflow manually) to deploy.
-
-## Project Structure
-
-```text
-todo-card/
-	src/
-		components/
-			TodoCard.jsx
-		App.jsx
-		App.css
-		index.css
-	.github/
-		workflows/
-			deploy.yml
-```
+- The portal expects the backend to be running and configured with `WEB_PORTAL_URL` pointing to this app.
+- All mutating requests include the CSRF header automatically when the session is cookie-based.

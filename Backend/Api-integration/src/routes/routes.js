@@ -9,6 +9,7 @@ import {
 	exportProfiles
 } from "../controllers/ProfileController.js";
 import { authMiddleware, requireRole } from "../middleware/authMiddleware.js";
+import { requireCsrf } from "../middleware/csrf.js";
 import { apiLimiter } from "../middleware/rateLimiter.js";
 
 const router = Router();
@@ -20,11 +21,11 @@ router.use(apiLimiter);
 router.get("/classify", classifyName);
 
 // Protected endpoints (authentication required)
-router.post("/profiles", authMiddleware, requireRole("admin"), createProfile);
+router.post("/profiles", authMiddleware, requireCsrf, requireRole("admin"), createProfile);
 router.get("/profiles/search", authMiddleware, searchProfiles);
-router.get("/profiles/export", authMiddleware, exportProfiles);
+router.get("/profiles/export", authMiddleware, requireRole("admin"),exportProfiles);
 router.get("/profiles", authMiddleware, listAllProfiles);
 router.get("/profiles/:id", authMiddleware, getProfile);
-router.delete("/profiles/:id", authMiddleware, requireRole("admin"), deleteProfile);
+router.delete("/profiles/:id", authMiddleware, requireCsrf, requireRole("admin"), deleteProfile);
 
 export default router;

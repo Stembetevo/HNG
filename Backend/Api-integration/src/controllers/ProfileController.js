@@ -362,7 +362,8 @@ export async function searchProfiles(req, res, next) {
         const baseUrl = `/api/profiles/search`;
         const queryParams = new URLSearchParams();
         
-        if (parsed.filters?.q) queryParams.append('q', parsed.filters.q);
+        // Use the original query 'q' from request, not parsed.filters
+        if (req.query.q) queryParams.append('q', req.query.q);
         if (parsed.sortBy) queryParams.append('sort_by', parsed.sortBy);
         if (parsed.order) queryParams.append('order', parsed.order);
         queryParams.append('limit', parsed.limit);
@@ -419,6 +420,11 @@ export async function exportProfiles(req, res, next) {
             ...parsed,
             limit: 50000 // Large limit to get all matching profiles
         });
+        const isTruncated = result.total > 5000
+
+        if (isTruncated) {
+            return statusError(res, "The data has been truncated")
+        }
 
         if (!result.data || result.data.length === 0) {
             return statusError(res, 'No profiles to export', 404);
@@ -457,13 +463,22 @@ export async function exportProfiles(req, res, next) {
  * Build CSV string from data
  */
 function buildCSV(headers, data) {
-    // Escape CSV values
+    // Escape CSV values with formula injection protection
     const escapeCSV = (value) => {
         if (value === null || value === undefined) return '';
-        const stringValue = String(value);
+        let stringValue = String(value);
+        
+        // Neutralize formula injection vectors by prefixing with single quote
+        const formulaTriggers = ['=', '+', '-', '@', '\t', '\r'];
+        if (formulaTriggers.some(t => stringValue.startsWith(t))) {
+            stringValue = "'" + stringValue;
+        }
+        
+        // Apply CSV quoting for special characters (comma, quote, newline)
         if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
             return `"${stringValue.replace(/"/g, '""')}"`;
         }
+        
         return stringValue;
     };
     
