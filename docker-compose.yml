@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./Backend/Api-integration
+      dockerfile: Dockerfile
+    container_name: insighta-api
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-your_client_id}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-your_secret}
+      GITHUB_REDIRECT_URI: http://localhost:3000/api/auth/callback/github
+      WEB_PORTAL_URL: http://localhost:5173
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_min_32_chars}
+      CORS_ORIGIN: http://localhost:5173
+      PORT: 3000
+    volumes:
+      - ./Backend/Api-integration/data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  frontend:
+    image: node:22-alpine
+    container_name: insighta-portal
+    working_dir: /app
+    volumes:
+      - ./Frontend/insighta-portal:/app
+    ports:
+      - "5173:5173"
+    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm run dev"
+    environment:
+      VITE_API_URL: http://localhost:3000
+    restart: unless-stopped

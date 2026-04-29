@@ -28,6 +28,13 @@ app.get("/", (req, res) => {
     });
 });
 
+app.get("/api/health", (req, res) => {
+    return res.status(200).json({
+        status: "ok",
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Authentication routes (no version required)
 app.use("/auth", authRoutes);
 app.use("/api/auth", authRoutes);
