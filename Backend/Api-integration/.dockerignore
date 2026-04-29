@@ -2,7 +2,9 @@ node_modules
 pnpm-store
 .git
 .gitignore
-.env.example
+.env
+.env.*
+!.env.example
 README.md
 .DS_Store
 .editorconfig

@@ -10,11 +10,11 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-your_client_id}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-your_secret}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:?set GITHUB_CLIENT_ID in your environment or .env}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:?set GITHUB_CLIENT_SECRET in your environment or .env}
       GITHUB_REDIRECT_URI: http://localhost:3000/api/auth/callback/github
       WEB_PORTAL_URL: http://localhost:5173
-      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_min_32_chars}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in your environment or .env}
       CORS_ORIGIN: http://localhost:5173
       PORT: 3000
     volumes:
@@ -27,6 +27,7 @@ services:
       start_period: 40s
     restart: unless-stopped
 
+# Local development-style frontend container that serves the production build.
   frontend:
     image: node:22-alpine
     container_name: insighta-portal
@@ -35,7 +36,7 @@ services:
       - ./Frontend/insighta-portal:/app
     ports:
       - "5173:5173"
-    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm run dev"
+    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm run build && pnpm run preview --host 0.0.0.0 --port 5173"
     environment:
-      VITE_API_URL: http://localhost:3000
+      VITE_API_URL: http://backend:3000
     restart: unless-stopped

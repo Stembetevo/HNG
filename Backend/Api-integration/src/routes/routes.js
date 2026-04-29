@@ -4,6 +4,7 @@ import {
 	createProfile,
 	deleteProfile,
 	getProfile,
+	getProfilesCount,
 	listAllProfiles,
 	searchProfiles,
 	exportProfiles
@@ -23,6 +24,7 @@ router.get("/classify", classifyName);
 // Protected endpoints (authentication required)
 router.post("/profiles", authMiddleware, requireCsrf, requireRole("admin"), createProfile);
 router.get("/profiles/search", authMiddleware, searchProfiles);
+router.get("/profiles/count", authMiddleware, getProfilesCount);
 router.get("/profiles/export", authMiddleware, requireRole("admin"),exportProfiles);
 router.get("/profiles", authMiddleware, listAllProfiles);
 router.get("/profiles/:id", authMiddleware, getProfile);

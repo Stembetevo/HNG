@@ -20,7 +20,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'cd Backend/Api-integration && pnpm run start',
+    command: 'sh -c "cd /home/stephen-kinyua/Documents/HNG/Frontend/insighta-portal && pnpm run dev -- --host 0.0.0.0 >/tmp/insighta-frontend.log 2>&1 & frontend_pid=$!; cd /home/stephen-kinyua/Documents/HNG/Backend/Api-integration && pnpm run start >/tmp/insighta-backend.log 2>&1 & backend_pid=$!; wait $backend_pid $frontend_pid"',
     url: 'http://localhost:3000/api/health',
     reuseExistingServer: !process.env.CI,
     stdout: 'ignore',

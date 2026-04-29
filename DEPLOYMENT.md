@@ -134,11 +134,38 @@ gcloud config set project YOUR_PROJECT_ID
 gcloud run deploy insighta-api \
   --image YOUR_REGISTRY/insighta-api:latest \
   --port 3000 \
-  --set-env-vars GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID},GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET} \
   --min-instances 1 \
   --max-instances 10 \
   --memory 512Mi \
   --cpu 1
+```
+
+For approved env-file based deployments, create an `env.yaml` file and pass it with `--env-vars-file`:
+
+```yaml
+GITHUB_CLIENT_ID: your_client_id
+GITHUB_CLIENT_SECRET: your_client_secret
+WEB_PORTAL_URL: https://portal.yourdomain.com
+JWT_SECRET: your_strong_random_secret_min_32_chars
+```
+
+```bash
+gcloud run deploy insighta-api \
+  --image YOUR_REGISTRY/insighta-api:latest \
+  --port 3000 \
+  --env-vars-file env.yaml
+```
+
+For secrets, use Secret Manager and inject them at deploy time:
+
+```bash
+gcloud secrets create github-client-secret --data-file=- <<< "your_secret"
+gcloud secrets create jwt-secret --data-file=- <<< "your_jwt_secret"
+
+gcloud run deploy insighta-api \
+  --image YOUR_REGISTRY/insighta-api:latest \
+  --port 3000 \
+  --update-secrets GITHUB_CLIENT_SECRET=github-client-secret:latest,JWT_SECRET=jwt-secret:latest
 ```
 
 #### Deploy to Azure Container Instances
@@ -160,7 +187,7 @@ az container create --resource-group insighta-rg \
   --name insighta-api \
   --image insightaregistry.azurecr.io/insighta-api:latest \
   --cpu 1 --memory 0.5 \
-  --environment-variables NODE_ENV=production \
+  --secure-environment-variables GITHUB_CLIENT_ID=@Microsoft.KeyVault(SecretUri=https://your-vault.vault.azure.net/secrets/github-client-id/) \
   --ports 3000 \
   --registry-login-server insightaregistry.azurecr.io \
   --registry-username ${ACR_USERNAME} \
@@ -243,6 +270,8 @@ deploy:
   needs: [backend, frontend, e2e-tests]
   runs-on: ubuntu-latest
   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  env:
+    GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
   steps:
     - uses: actions/checkout@v4
     
@@ -260,7 +289,7 @@ deploy:
       run: |
         echo "$GCP_SA_KEY" | base64 -d > /tmp/key.json
         gcloud auth activate-service-account --key-file=/tmp/key.json
-        gcloud run deploy insighta-api --image gcr.io/$GCP_PROJECT/insighta-api:$GITHUB_SHA
+        gcloud run deploy insighta-api --image gcr.io/${GCP_PROJECT}/insighta-api:${GITHUB_SHA}
 ```
 
 ## Phase 5: Monitoring & Logging

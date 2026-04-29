@@ -25,19 +25,15 @@ test.describe('API Health & Export Limits', () => {
     }
   });
 
-  test('should successfully export <5000 profiles', async ({ request }) => {
+  test('should successfully export <=5000 profiles', async ({ request }) => {
     const countRes = await request.get('/api/profiles/count');
-    if (countRes.status() === 200) {
-      const { total } = await countRes.json();
-      if (total <= 5000) {
-        const exportRes = await request.get('/api/profiles/export');
-        expect(exportRes.status()).toBe(200);
-        expect(exportRes.headers()['content-type']).toContain('text/csv');
-      } else {
-        test.skip();
-      }
-    } else {
-      test.skip();
-    }
+    test.skip(countRes.status() !== 200, 'count endpoint failed');
+
+    const { total } = await countRes.json();
+    test.skip(total > 5000, 'too many profiles');
+
+    const exportRes = await request.get('/api/profiles/export');
+    expect(exportRes.status()).toBe(200);
+    expect(exportRes.headers()['content-type']).toContain('text/csv');
   });
 });

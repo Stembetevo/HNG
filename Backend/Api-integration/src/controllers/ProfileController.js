@@ -3,7 +3,7 @@ import {
     createOrGetProfileFromPayload,
     getProfileById,
     getProfiles,
-    getProfilesCount,
+    getProfilesCount as fetchProfilesCount,
     parseProfilesSearchQuery,
     removeProfileById
 } from "../services/ProfileService.js";
@@ -418,7 +418,7 @@ export async function exportProfiles(req, res, next) {
         }
 
         // Do a lightweight count check before loading export rows.
-        const totalCount = await getProfilesCount(parsed.filters || {});
+        const totalCount = await fetchProfilesCount(parsed.filters || {});
         const isTruncated = totalCount > EXPORT_LIMIT;
 
         if (isTruncated) {
@@ -433,7 +433,6 @@ export async function exportProfiles(req, res, next) {
             page: 1,
             limit: EXPORT_LIMIT
         });
-
         if (!result.data || result.data.length === 0) {
             return statusError(res, 'No profiles to export', 404);
         }
@@ -462,6 +461,25 @@ export async function exportProfiles(req, res, next) {
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         
         return res.send(csv);
+    } catch (error) {
+        return next(error);
+    }
+}
+
+export async function getProfilesCount(req, res, next) {
+    try {
+        const parsed = buildListFilters(req.query ?? {});
+
+        if (parsed.error) {
+            return statusError(res, parsed.error.message, parsed.error.statusCode);
+        }
+
+        const total = await fetchProfilesCount(parsed.filters || {});
+
+        return res.status(200).json({
+            status: "success",
+            total
+        });
     } catch (error) {
         return next(error);
     }

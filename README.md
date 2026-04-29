@@ -321,8 +321,9 @@ View workflow runs: https://github.com/your-org/insighta-labs/actions
 
 ```bash
 # Check env vars
-source Backend/Api-integration/.env
-env | grep GITHUB
+grep -E '^GITHUB_CLIENT_(ID|SECRET)=' Backend/Api-integration/.env
+
+node --input-type=module -e "import dotenv from 'dotenv'; dotenv.config({ path: 'Backend/Api-integration/.env' }); const hasClientId = Boolean(process.env.GITHUB_CLIENT_ID); const hasClientSecret = Boolean(process.env.GITHUB_CLIENT_SECRET); console.log(JSON.stringify({ GITHUB_CLIENT_ID: hasClientId, GITHUB_CLIENT_SECRET: hasClientSecret })); if (!hasClientId || !hasClientSecret) process.exit(1);"
 
 # Verify GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET are set
 
