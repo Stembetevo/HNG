@@ -61,7 +61,7 @@ async function request(path, { method = 'GET', body, includeCsrf = false, header
   }
 
   if (contentType.includes('application/json')) {
-    return response.json();
+    return response.json().catch(() => null);
   }
 
   return response.text();
@@ -101,12 +101,20 @@ export function listProfiles(params = {}) {
 }
 
 export function searchProfiles(queryText, params = {}) {
-  const query = new URLSearchParams({ q: queryText, ...params });
+  const filteredParams = {};
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '' && key !== 'q') {
+      filteredParams[key] = value;
+    }
+  }
+
+  const query = new URLSearchParams({ ...filteredParams, q: queryText });
   return request(`/api/profiles/search?${query.toString()}`);
 }
 
 export function getProfileById(profileId) {
-  return request(`/api/profiles/${profileId}`);
+  return request(`/api/profiles/${encodeURIComponent(profileId)}`);
 }
 
 export function createProfile(name) {

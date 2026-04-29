@@ -26,6 +26,18 @@ function getGitHubRedirectUri(webMode) {
     return webMode ? `${config.github.redirectUri}?mode=web` : config.github.redirectUri;
 }
 
+function buildWebPortalRedirect(isNew) {
+    const base = (config.webPortalUrl || '').trim();
+
+    if (!base) {
+        throw new Error('WEB_PORTAL_URL is not configured');
+    }
+
+    const redirectUrl = new URL(base);
+    redirectUrl.searchParams.set('isNew', String(Boolean(isNew)));
+    return redirectUrl.toString();
+}
+
 function cookieOptions(maxAge) {
     return {
         httpOnly: true,
@@ -159,7 +171,16 @@ export async function handleGitHubCallback(req, res) {
 
         if (webMode) {
             setSessionCookies(res, accessToken, refreshToken);
-            return res.redirect(302, config.webPortalUrl);
+
+            let redirectUrl;
+            try {
+                redirectUrl = buildWebPortalRedirect(isNew);
+            } catch (redirectError) {
+                console.error('Invalid WEB_PORTAL_URL for OAuth redirect:', redirectError.message);
+                return statusError(res, 'WEB_PORTAL_URL is not configured correctly', 500);
+            }
+
+            return res.redirect(302, redirectUrl);
         }
         
         return res.json({

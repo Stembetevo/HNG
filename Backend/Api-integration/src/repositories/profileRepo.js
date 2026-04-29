@@ -140,6 +140,12 @@ export function listProfiles({ filters = {}, sortBy = "created_at", order = "des
 	};
 }
 
+export function countProfiles(filters = {}) {
+	const { whereClause, params } = buildWhereClause(filters);
+	const stmt = db.prepare(`SELECT COUNT(*) AS total FROM profiles ${whereClause}`);
+	return stmt.get(...params).total;
+}
+
 export function deleteProfileById(id) {
 	const stmt = db.prepare(`DELETE FROM profiles WHERE id = ?`);
 	return stmt.run(id).changes;

@@ -508,7 +508,18 @@ function ProfilesPage({ onNavigate, user }) {
               </thead>
               <tbody>
                 {data.items.map((profile) => (
-                  <tr key={profile.id} onClick={() => onNavigate(`/profiles/${profile.id}`)}>
+                  <tr
+                    key={profile.id}
+                    onClick={() => onNavigate(`/profiles/${profile.id}`)}
+                    tabIndex={0}
+                    role="button"
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        onNavigate(`/profiles/${profile.id}`);
+                      }
+                    }}
+                  >
                     <td>
                       <strong>{profile.name}</strong>
                       <small>{profile.id}</small>

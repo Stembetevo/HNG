@@ -219,6 +219,7 @@ export async function createOrUpdateUser(githubId, username, email, avatarUrl) {
     try {
         // Check if user exists
         const selectStmt = db.prepare('SELECT * FROM users WHERE github_id = ?');
+        const existingUser = selectStmt.get(githubId) || null;
         if (existingUser) {
             // Update last login
             const now = new Date().toISOString();

@@ -6,8 +6,25 @@ export function parseCookies(cookieHeader = "") {
             return cookies;
         }
 
-        const key = decodeURIComponent(pair.slice(0, index).trim());
-        const value = decodeURIComponent(pair.slice(index + 1).trim());
+        const rawKey = pair.slice(0, index).trim();
+        const rawValue = pair.slice(index + 1).trim();
+
+        let key = rawKey;
+        let value = rawValue;
+
+        try {
+            key = decodeURIComponent(rawKey);
+        } catch {
+            // Keep raw key when percent-decoding fails.
+            key = rawKey;
+        }
+
+        try {
+            value = decodeURIComponent(rawValue);
+        } catch {
+            // Keep raw value when percent-decoding fails.
+            value = rawValue;
+        }
 
         if (key) {
             cookies[key] = value;

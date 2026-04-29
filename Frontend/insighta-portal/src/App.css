@@ -425,6 +425,22 @@ select {
   border-color: rgba(151, 171, 196, 0.14);
 }
 
+.field input:focus-visible,
+.field select:focus-visible,
+.primary-btn:focus-visible,
+.primary-btn--compact:focus-visible,
+.ghost-btn:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(125, 211, 252, 0.28);
+}
+
+.table tbody tr:focus-visible {
+  outline: 3px solid var(--accent-2);
+  outline-offset: -3px;
+  background: rgba(125, 211, 252, 0.08);
+}
+
 .table-toolbar {
   justify-content: space-between;
   color: var(--muted);

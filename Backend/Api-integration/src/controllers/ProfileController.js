@@ -3,6 +3,7 @@ import {
     createOrGetProfileFromPayload,
     getProfileById,
     getProfiles,
+    getProfilesCount,
     parseProfilesSearchQuery,
     removeProfileById
 } from "../services/ProfileService.js";
@@ -410,21 +411,28 @@ export async function deleteProfile(req, res, next) {
  */
 export async function exportProfiles(req, res, next) {
     try {
+        const EXPORT_LIMIT = 5000;
         const parsed = buildListFilters(req.query ?? {});
         if (parsed.error) {
             return statusError(res, parsed.error.message, parsed.error.statusCode);
         }
 
-        // Get all profiles with filters (but no pagination limit)
-        const result = await getProfiles({
-            ...parsed,
-            limit: 50000 // Large limit to get all matching profiles
-        });
-        const isTruncated = result.total > 5000
+        // Do a lightweight count check before loading export rows.
+        const totalCount = await getProfilesCount(parsed.filters || {});
+        const isTruncated = totalCount > EXPORT_LIMIT;
 
         if (isTruncated) {
-            return statusError(res, "The data has been truncated")
+            res.setHeader('X-Results-Truncated', 'true');
+            res.setHeader('X-Results-Limit', String(EXPORT_LIMIT));
+            return statusError(res, 'The data has been truncated', 413);
         }
+
+        // Count is within threshold, fetch export rows.
+        const result = await getProfiles({
+            ...parsed,
+            page: 1,
+            limit: EXPORT_LIMIT
+        });
 
         if (!result.data || result.data.length === 0) {
             return statusError(res, 'No profiles to export', 404);

@@ -5,6 +5,7 @@ import {
     findProfileByName,
     insertProfile,
     listProfiles,
+    countProfiles,
     deleteProfileById
 } from "../repositories/profileRepo.js";
 import {
@@ -314,6 +315,10 @@ export async function getProfileById(id) {
 
 export async function getProfiles(filters) {
     return listProfiles(filters);
+}
+
+export async function getProfilesCount(filters = {}) {
+    return countProfiles(filters);
 }
 
 export function parseProfilesSearchQuery(query) {
