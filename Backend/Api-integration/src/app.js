@@ -10,9 +10,11 @@ import config from "./config/index.js";
 
 const app = express();
 
+// Reflect the request origin (allows browser requests from the frontend)
+// In production you can restrict this by configuring CORS_ORIGIN to a list
 app.use(
     cors({
-        origin: config.corsOrigin,
+        origin: true,
         credentials: true
     })
 );

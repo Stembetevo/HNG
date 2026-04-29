@@ -19,7 +19,11 @@ oauthStates = new Map();
 const STATE_EXPIRY = 10 * 60 * 1000; // 10 minutes
 
 function isWebMode(req) {
-    return req.query?.mode === 'web';
+    // Consider explicit ?mode=web OR browser requests (Accept: text/html)
+    if (req.query?.mode === 'web') return true;
+    const accept = req.headers?.accept || '';
+    if (accept.includes('text/html')) return true;
+    return false;
 }
 
 function getGitHubRedirectUri(webMode) {
@@ -79,7 +83,11 @@ export async function initiateGitHubOAuth(req, res) {
         const state = crypto.randomBytes(32).toString('hex');
         const expiresAt = Date.now() + STATE_EXPIRY;
         
-        oauthStates.set(state, { expiresAt, webMode });
+        // Store optional PKCE code_challenge if supplied
+        const code_challenge = req.query?.code_challenge;
+        const stored = { expiresAt, webMode };
+        if (code_challenge) stored.code_challenge = code_challenge;
+        oauthStates.set(state, stored);
         const redirectUri = getGitHubRedirectUri(webMode);
         
         const params = new URLSearchParams({
@@ -89,6 +97,12 @@ export async function initiateGitHubOAuth(req, res) {
             state,
             allow_signup: 'true'
         });
+
+        // Include PKCE challenge in the authorization URL when provided
+        if (code_challenge) {
+            params.set('code_challenge', code_challenge);
+            params.set('code_challenge_method', 'S256');
+        }
         
         const redirectUrl = `https://github.com/login/oauth/authorize?${params}`;
 
