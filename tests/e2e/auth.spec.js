@@ -21,19 +21,30 @@ test.describe('Authentication & OAuth Flow', () => {
 
     await expect(loginButton).toBeVisible();
 
-    const popupPromise = context.waitForEvent('page', { timeout: 3000 }).catch(() => null);
+    const popupPromise = context.waitForEvent('page', { timeout: 10000 })
+      .then((popup) => ({ type: 'popup', popup }))
+      .catch(() => null);
+    const navigationPromise = page.waitForNavigation({ timeout: 10000 })
+      .then(() => ({ type: 'navigation' }))
+      .catch(() => null);
+
     await loginButton.click();
 
-    const popup = await popupPromise;
+    const outcome = await Promise.race([popupPromise, navigationPromise].filter(Boolean));
 
-    if (popup) {
+    if (outcome?.type === 'popup') {
+      const { popup } = outcome;
       await expect(popup).toHaveURL(/github\.com\/login(\?client_id=|\/oauth)/);
       await popup.close();
       return;
     }
 
-    await page.waitForURL(/\/api\/auth\/github\?mode=web|github\.com\/login(\?client_id=|\/oauth)/, { timeout: 5000 });
-    expect(page.url()).toMatch(/\/api\/auth\/github\?mode=web|github\.com\/login(\?client_id=|\/oauth)/);
+    if (outcome?.type === 'navigation') {
+      expect(page.url()).toMatch(/\/api\/auth\/github\?mode=web|github\.com\/login(\?client_id=|\/oauth)/);
+      return;
+    }
+
+    expect.fail('OAuth initiation did not open a popup or navigate the page');
   });
 
   test('GET /api/auth/me should return 401 when unauthenticated', async ({ request }) => {

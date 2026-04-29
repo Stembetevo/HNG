@@ -86,6 +86,9 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Install frontend dependencies
+        run: cd Frontend/insighta-portal && pnpm install --frozen-lockfile
+
       - name: Install backend dependencies
         run: cd Backend/Api-integration && pnpm install --frozen-lockfile
 
